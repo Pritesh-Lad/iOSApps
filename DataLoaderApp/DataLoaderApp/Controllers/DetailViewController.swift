@@ -12,6 +12,7 @@ import SnapKit
 class DetailViewController: UIViewController {
 
     override func viewDidLoad() {
+        super.viewDidLoad()
         self.view.backgroundColor = .white
     }
     
@@ -23,13 +24,17 @@ class DetailViewController: UIViewController {
     }
     
     // MARK: Helper methods
+    
+    ///Fetches & displays the details of the data based on it's type
     func displayData() {
+        self.navigationItem.title = "\(data!.type)" + "(\(data!.identifier ))"
         //start activity indicator
         self.showSpinner(onView: self.view)
         self.data?.fetchData(completion: { (data) in
             //stop activity indicator
             self.removeSpinner()
-            if let imageData = data.imageData {
+            let imageData = data.imageData
+            if imageData.count != 0 {
                 //render image
                 let imageView = UIImageView.init(image: UIImage.init(data: imageData))
                 imageView.contentMode = .scaleAspectFit
@@ -45,6 +50,7 @@ class DetailViewController: UIViewController {
         })
     }
     
+    ///Adds a centered subview into self.view
     func addCenteredSubView(subview:UIView) {
         self.view.addSubview(subview)
         subview.snp.makeConstraints { (constraintMaker) in
@@ -60,7 +66,7 @@ class DetailViewController: UIViewController {
 var spinner : UIActivityIndicatorView?
 
 extension UIViewController {
-    
+    ///Starts a spinner at the center of a given view
     func showSpinner(onView : UIView) {
         DispatchQueue.main.async {
             let indicator = UIActivityIndicatorView.init(style: .large)
@@ -71,6 +77,7 @@ extension UIViewController {
         }
     }
     
+    ///Stops a spinner
     func removeSpinner() {
         DispatchQueue.main.async {
             spinner?.stopAnimating()

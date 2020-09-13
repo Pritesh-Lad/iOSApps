@@ -8,28 +8,36 @@
 
 import UIKit
 import Alamofire
+import RealmSwift
 
 class DataLoader: NSObject {
-    var API:String = "https://raw.githubusercontent.com/AxxessTech/Mobile-Projects/master/challenge.json"
+    let API:String = "https://raw.githubusercontent.com/AxxessTech/Mobile-Projects/master/challenge.json"
+    let realmStore = try! Realm()
+    lazy var dataItems:Results<DataValue> = {self.realmStore.objects(DataValue.self)}()
     
-    var dataItems = Array<DataValue>()
-    
+    ///Loads data from API if it's not available in the local storage
     public func loadData(completion: @escaping () -> Void) {
-        AF.request(API).responseJSON { response in
-            if let json = response.value as? Array<Any> {
-                // serialized json response
-                print("JSON: \(json)")
-                for dataDict in json {
-                    let data = DataValue.init(dict: dataDict as! Dictionary<String, Any>)
-                    self.dataItems.append(data)
-                }                
-                //Sort based on 'type' of the DataValue objects
-                self.dataItems.sort { (data1, data2) -> Bool in
-                    return data1.type!.compare(data2.type!) == ComparisonResult.orderedAscending
+        guard dataItems.count != 0 else {
+            //data not in local storage, fetch it from server
+            AF.request(API).responseJSON { response in
+                if let json = response.value as? Array<Any> {
+                    //write the fetched data to the local storage
+                    try! self.realmStore.write() {
+                        for dataDict in json {
+                            let data = DataValue.init(dict: dataDict as! Dictionary<String, Any>)
+                            self.realmStore.add(data)
+                        }
+                    }
+                    self.dataItems = self.realmStore.objects(DataValue.self)
+                    //Sort based on 'type' of the DataValue objects
+                    self.dataItems = self.dataItems.sorted(byKeyPath: "type")
                 }
+                completion()
             }
-            completion()
+            return
         }
+        //Sort based on 'type' of the DataValue objects
+        self.dataItems = self.dataItems.sorted(byKeyPath: "type")
+        completion()
     }
-    
 }

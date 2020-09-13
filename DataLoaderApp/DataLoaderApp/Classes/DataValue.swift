@@ -8,43 +8,55 @@
 
 import UIKit
 import Alamofire
+import RealmSwift
 
-class DataValue: NSObject {
-    public var identifier: String?
-    public var date: String?
-    public var type: String?
-    public var value: String?
-    public var imageData:Data?
-    public var text: String?
+class DataValue: Object {
+    @objc dynamic var identifier = ""
+    @objc dynamic var date = ""
+    @objc dynamic var type = ""
+    @objc dynamic var value = ""
+    @objc dynamic var imageData = Data()
+    @objc dynamic var text = ""
 
     typealias CompletionHandler = (_ data: DataValue) -> Void
 
-    public init(dict:Dictionary<String,Any>) {
-        identifier = dict["id"] as? String
-        type = dict["type"] as? String
-        value = dict["data"] as? String
-        date = dict["date"] as? String
+    required init() {
     }
     
+    public init(dict:Dictionary<String,Any>) {
+        identifier = dict["id"] as? String ?? ""
+        type = dict["type"] as? String ?? ""
+        value = dict["data"] as? String ?? ""
+        date = dict["date"] as? String ?? ""
+    }
+    
+    ///Fetches the data from server if it's not available in the local storage
     func fetchData(completion: @escaping CompletionHandler) {
+        let realmStore = try! Realm()
         //fetch data based on its type
         if type == "image" {
-            if self.imageData != nil {
+            //if image data is available, simply return
+            if self.imageData.count != 0 {
                 completion(self)
                 return
             }
-            //fetch image from url
-            AF.request(value ?? "").response { (response) in
-                if let respData = response.data {
-                    self.imageData = respData
-                } else {
-                    self.text = response.error?.localizedDescription
+            //fetch image data from url
+            AF.request(value).response { (response) in
+                try! realmStore.write() {
+                    if let respData = response.data {
+                        self.imageData = respData
+                    } else {
+                        self.text = response.error?.localizedDescription ?? "no image available"
+                    }
                 }
                 completion(self)
             }
         } else {
-            self.text = self.value
-            completion(self)
+            //for other 'type's, use textual data
+            try! realmStore.write() {
+                self.text = self.value
+                completion(self)
+            }
         }
     }
 }
